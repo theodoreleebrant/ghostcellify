@@ -139,3 +139,12 @@ let token = &mut token;
 });
 }
 
+#[test]
+#[should_panic]
+fn test_multi_mut_borrow() {
+    let node1 : Rc<RefCell<Node<T>>> = Node::new(1);
+    let cell : RefCell<Node<T>> = *node1; // typically, this is performed implicitly via the `Deref` trait
+    let r1 = node1.borrow_mut();
+    let r2 = node1.borrow_mut();
+}
+
