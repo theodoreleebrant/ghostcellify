@@ -1,0 +1,27 @@
+[package]
+name = "ghostcelltf"
+version = "0.1.0"
+edition = "2021"
+rustc_private = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+syn = {version = "2.0", features = ["full", "extra-traits", "parsing", "fold"] }
+quote = "1.0"
+ghostcell_macros = { path = "../ghostcell_macros" }
+rust-analyzer = "0.0.1"
+rustc_tools_util = "0.2.0"
+colored = "2.0.0"
+rustfix = "0.5.1"
+itertools = "0.9.0"
+log = "0.4"
+string_cache = "0.8"
+lazy_static = "1.4"
+env_logger = "0.8"
+ahash = "0.7.2"
+clap = "2.33.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.5"
+ghost-cell = "0.2.3"

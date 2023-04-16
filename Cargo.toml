@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "ghostcellify",
+    "ghostcell_macros",
+]
