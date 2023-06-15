@@ -1,10 +1,14 @@
-use crate::{lazy_static::lazy_static, Atom, Name, analysis::span::{qname, qname_from_hir}};
+use crate::{
+    analysis::span::{qname, qname_from_hir},
+    lazy_static::lazy_static,
+    Atom, Name,
+};
 /// This module contains a simplified representation of Rust's notion of types.
 use itertools::Itertools;
 use rustc_ast::ast::LitKind;
-use rustc_hir::{def_id::DefId, def::*, *};
+use rustc_hir::{def::*, def_id::DefId, *};
 use rustc_lint::LateContext;
-use rustc_middle::ty::{BoundRegionKind, Region, Ty, TyKind, TypeAndMut, subst};
+use rustc_middle::ty::{subst, BoundRegionKind, Region, Ty, TyKind, TypeAndMut};
 use std::{
     collections::{BTreeSet, HashMap},
     fmt::Debug,
@@ -98,28 +102,37 @@ pub enum Type {
 impl Type {
     pub fn get_inner_tys(ctx: &LateContext, outer: &PathSegment) -> Vec<Self> {
         if let Some(args) = &outer.args {
-            args.args.iter().map(|arg| {
-                match arg {
+            args.args
+                .iter()
+                .map(|arg| match arg {
                     GenericArg::Type(ty) => Type::from_hir_ty(ctx, ty),
-                    _ => panic!("generic arg is not a type")
-                }
-            }).collect()
+                    _ => panic!("generic arg is not a type"),
+                })
+                .collect()
         } else {
             vec![]
         }
     }
 
-    pub fn opt_brand_struct(ty: &Type, branded_structs: &HashMap<Name, Lifetime>) -> Option<Lifetime> {
+    pub fn opt_brand_struct(
+        ty: &Type,
+        branded_structs: &HashMap<Name, Lifetime>,
+    ) -> Option<Lifetime> {
         match ty {
-            Type::Ref(_, _, ty) | Type::Boxed(ty) | Type::OptionT(ty) => Type::opt_brand_struct(ty, branded_structs),
+            Type::Ref(_, _, ty) | Type::Boxed(ty) | Type::OptionT(ty) => {
+                Type::opt_brand_struct(ty, branded_structs)
+            }
             Type::Struct(name) => branded_structs.get(name).cloned(),
-            Type::Generic(outer, inner_tys) => 
-                Type::opt_brand_struct(outer, branded_structs)
-                    .or_else(|| inner_tys.iter().find_map(|ty| Type::opt_brand_struct(ty, &branded_structs))),
-            _ => None
+            Type::Generic(outer, inner_tys) => Type::opt_brand_struct(outer, branded_structs)
+                .or_else(|| {
+                    inner_tys
+                        .iter()
+                        .find_map(|ty| Type::opt_brand_struct(ty, &branded_structs))
+                }),
+            _ => None,
         }
     }
-    
+
     /// Create a type object from a HIR (syntactic) type. Using these
     /// types may require extra expansion and support, since these
     /// types are not normalized by type checking.
@@ -179,7 +192,7 @@ impl Type {
 
     //                         let param_name = Name::from(&*param.name.ident().name.as_str());
 
-    //                         param_name  
+    //                         param_name
     //                     }
     //                     _ => panic!(
     //                         "found non-lifetime generics parameter in function type {:?}",
@@ -247,7 +260,7 @@ impl Type {
     //                 },
     //                 // TODO: specialize int, float, etc. types with
     //                 // best-effort syntactic matching
-    //                 _ => { 
+    //                 _ => {
     //                     // log::debug!("tried generic path {:#?}", path);
     //                     if let QPath::Resolved(_, Path { segments, .. }) = qpath {
     //                         let outer = segments.first().unwrap();
@@ -255,9 +268,9 @@ impl Type {
     //                             Res::Def(DefKind::Struct, def_id) => {
     //                                 let name = Name::from(get_def_qname(ctx, def_id));
     //                                 let outer_ty = Box::new(Type::Struct(name));
-                                    
+
     //                                 Type::Generic(outer_ty, Type::get_inner_tys(ctx, outer))
-    //                             }, 
+    //                             },
     //                             Res::Def(DefKind::TyParam, def_id) => {
     //                                 let name = Name::from(get_def_qname(ctx, def_id));
     //                                 let outer_ty = Box::new(Type::TyParam(name));
@@ -272,13 +285,13 @@ impl Type {
     //                                 let name = Name::from(get_def_qname(ctx, def_id));
     //                                 let outer_ty = Box::new(Type::TyAlias(name));
     //                                 Type::Generic(outer_ty, Type::get_inner_tys(ctx, outer))
-    //                             }  
+    //                             }
     //                             _ => panic!("oops {:#?}", outer)
     //                         }
     //                     } else {
     //                         Type::Syntactic(path)
     //                     }
-                        
+
     //                 },
     //             }
     //         }
@@ -289,12 +302,12 @@ impl Type {
     //     }
     // }
 
-    pub fn from_hir_ty(ctx: &LateContext, ty:  &rustc_hir::Ty<'_>) -> Self {
+    pub fn from_hir_ty(ctx: &LateContext, ty: &rustc_hir::Ty<'_>) -> Self {
         Type::from_ty(ctx, rustc_hir_analysis::hir_ty_to_ty(ctx.tcx, &ty))
     }
 
     fn is_ty(ctx: &LateContext, arg: &subst::GenericArg) -> bool {
-        matches!(arg.unpack(), subst::GenericArgKind::Type(_)) 
+        matches!(arg.unpack(), subst::GenericArgKind::Type(_))
     }
 
     pub fn from_ty(ctx: &LateContext, ty: Ty<'_>) -> Self {
@@ -315,17 +328,16 @@ impl Type {
                 } else {
                     let name = Name::from(name);
                     let outer = if adt_def.is_struct() {
-                            Type::Struct(name)
-                        } else if adt_def.is_enum() {
-                            Type::Enum(name)
-                        } else if adt_def.is_union() {
-                            Type::Union(name)
-                        } else {
-                            unimplemented!("ADT definition is not implemented: {:?}", adt_def)
+                        Type::Struct(name)
+                    } else if adt_def.is_enum() {
+                        Type::Enum(name)
+                    } else if adt_def.is_union() {
+                        Type::Union(name)
+                    } else {
+                        unimplemented!("ADT definition is not implemented: {:?}", adt_def)
                     };
 
-
-                    let inner_tys : Vec<Type> = subs
+                    let inner_tys: Vec<Type> = subs
                         .iter()
                         .filter(|arg| Type::is_ty(ctx, arg))
                         .map(|sub| Type::from_ty(ctx, sub.expect_ty()))
@@ -333,10 +345,8 @@ impl Type {
 
                     log::debug!("ADT name: {:?}", outer);
                     // log::debug!("inner types {:#?} {:#?}", subs, inner_tys);
-                    
-                    Type::Generic(
-                        Box::new(outer),
-                        inner_tys)
+
+                    Type::Generic(Box::new(outer), inner_tys)
                 }
             }
             TyKind::Adt(adt_def, _subs) => {
@@ -367,7 +377,7 @@ impl Type {
                     region_to_lifetime(*region).unwrap(),
                     Box::new(Type::from_ty(ctx, *pointee_ty)),
                 )
-            },
+            }
             TyKind::FnDef(_, _) => panic!("not implemented: {:?}", ty.kind()),
             TyKind::FnPtr(poly_sig) => {
                 // note: for now, we assume that there are no
@@ -391,7 +401,7 @@ impl Type {
                     c_variadic: sig.c_variadic,
                 })
             }
-            TyKind::Dynamic(..) => panic!("dynamic types are not supported"),
+            TyKind::Dynamic(..) => Opaque, // TODO: support dynamic types
             TyKind::Closure(_, _) => Opaque,
             TyKind::Generator(_, _, _) | TyKind::GeneratorWitness(_) => panic!(
                 "generators and generator witnesses are not supported: {:?}",
@@ -433,7 +443,7 @@ impl Type {
             Type::Ref(_, _, inner) => inner.collect_structs(),
             Type::Boxed(inner) => inner.collect_structs(),
             Type::App(inner, _) => inner.collect_structs(),
-            Type::Generic(outer, inner) =>  {
+            Type::Generic(outer, inner) => {
                 let mut vecs = outer.collect_structs();
                 let mut inner: Vec<Name> = inner.iter().flat_map(|t| t.collect_structs()).collect();
                 vecs.append(&mut inner);
@@ -543,7 +553,6 @@ impl std::fmt::Display for Type {
         }
     }
 }
-
 
 impl std::fmt::Debug for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
