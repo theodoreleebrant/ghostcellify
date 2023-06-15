@@ -180,8 +180,9 @@ impl<'tcx> LateLintPass<'tcx> for LifetimeRewritePass {
                     rustc_hir::Ty { kind: TyKind::Path(QPath::Resolved(_, path)), ..} => {
                     let path_str = ctx.sess().source_map().span_to_snippet(path.span).unwrap();
                     let has_refcell = path_str == "RefCell";
-
-                    if has_refcell {
+                    
+                    // affects RefCell exprs like RefCell::new()
+                    if has_refcell{
                         make_suggestion(
                             ctx, 
                             path.span, 
@@ -242,7 +243,7 @@ impl<'tcx> LateLintPass<'tcx> for LifetimeRewritePass {
 
                                     let has_refcell = seg_str == ("RefCell"); // TODO use absolute path
 
-                                    if has_refcell {
+                                    if has_refcell && !brands.is_empty() {
                                         rustfix_utils::make_suggestion(
                                             ctx, 
                                             span, 
