@@ -548,15 +548,12 @@ pub struct StructInfoPass {
     /// *Syntactic* function pointer types seen in the program, used
     /// for marking the types inside them as used in external APIs.
     fn_ptr_types: Vec<Type>,
-    /// Number of branded structs seen so far
-    curr_brand : usize,
 }
 
 impl StructInfoPass {
     pub fn new<'tcx>(_: TyCtxt<'tcx>) -> Box<LatePass> {
         Box::new(StructInfoPass {
             info: StructInfo::new(),
-            curr_brand: 0,
             fn_ptr_types: Vec::new(),
         })
     }
@@ -577,8 +574,7 @@ impl StructInfoPass {
     ) {
         // add struct to branded_structs
         if should_brand {
-            self.info.branded_structs.insert(name.clone(), Lifetime::from(format!("id{}", self.curr_brand)));
-            self.curr_brand += 1;
+            self.info.branded_structs.insert(name.clone(), Lifetime::from(format!("id{}", 0)));
         }
 
         let mut lifetime_bounds = Vec::new();
